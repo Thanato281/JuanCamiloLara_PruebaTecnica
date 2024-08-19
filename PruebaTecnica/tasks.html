@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de tareas</title>
+    <link rel="stylesheet" href="/css/stylesTasks.css">
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            fetchTasks();
+
+           
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('due_date').setAttribute('min', today);
+
+            document.getElementById('filter-priority').addEventListener('change', function() {
+                fetchTasks(this.value);
+            });
+        });
+
+        function fetchTasks(priority = '') {
+            fetch('tasks.php')
+                .then(response => response.json())
+                .then(data => {
+                    const taskList = document.getElementById('task-list');
+                    taskList.innerHTML = ''; 
+                    data.forEach(tarea => {
+                        if (priority === '' || tarea.priority === priority) {
+                            const taskDiv = document.createElement('div');
+                            taskDiv.classList.add('task', tarea.priority);
+                            taskDiv.innerHTML = `
+                                <h3>${tarea.title}</h3>
+                                <p>${tarea.description}</p>
+                                <p>Fecha de vencimiento: ${tarea.due_date}</p>
+                                <p>Prioridad: ${tarea.priority}</p>
+                                ${tarea.attachment ? `<p>Archivo adjunto: <a href="${tarea.attachment}" target="_blank">Ver archivo</a></p>` : ''}
+                                <button onclick="editTask(${tarea.id})">Modificar</button>
+                                <button onclick="deleteTask(${tarea.id})">Borrar</button>
+                            `;
+                            taskList.appendChild(taskDiv);
+                        }
+                    });
+                })
+                .catch(error => console.error('Error al obtener las tareas:', error));
+        }
+
+        function editTask(id) {
+            window.location.href = `editTask.php?id=${id}`;
+        }
+
+        function deleteTask(id) {
+            if (confirm('¿Estás seguro de que deseas borrar esta tarea?')) {
+                fetch(`deleteTask.php?id=${id}`, { method: 'DELETE' })
+                    .then(response => {
+                        if (response.ok) {
+                            location.reload();
+                        } else {
+                            alert('Error al borrar la tarea');
+                        }
+                    })
+                    .catch(error => console.error('Error al borrar la tarea:', error));
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Mis Tareas</h1>
+    <form action="tasks.php" method="post" enctype="multipart/form-data">
+        <label for="title">Título:</label>
+        <input type="text" id="title" name="title" required>
+        <label for="description">Descripción:</label>
+        <textarea id="description" name="description" required></textarea>
+        <label for="due_date">Fecha de vencimiento:</label>
+        <input type="date" id="due_date" name="due_date" required>
+        <label for="priority">Prioridad:</label>
+        <select id="priority" name="priority">
+            <option value="alta">Alta</option>
+            <option value="media">Media</option>
+            <option value="baja">Baja</option>
+        </select>
+        <label for="attachment">Archivo adjunto:</label>
+        <input type="file" id="attachment" name="attachment">
+        <button type="submit">Agregar Tarea</button>
+    </form>
+
+    <h2>Tareas Programadas</h2>
+    <div class="filter-container">
+        <label for="filter-priority">Filtrar por prioridad:</label>
+        <select id="filter-priority" class="filter-select">
+            <option value="">Todas</option>
+            <option value="alta">Alta</option>
+            <option value="media">Media</option>
+            <option value="baja">Baja</option>
+        </select>
+    </div>
+    <div id="task-list"></div>
+</body>
+</html>
